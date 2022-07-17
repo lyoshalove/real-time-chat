@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./Chat.sass";
 import { IMessage } from "../../types/MessageType";
 
@@ -8,12 +8,15 @@ const Chat = () => {
   const socket: any = useRef();
   const [connected, setConnected] = useState<boolean>(false);
   const [username, setUsername] = useState<string>("");
-  const emojies: string[] = ["🐺", "🧠", "🧛‍♂️", "💅", "💕", "🍺"];
+  const emojies: string[] = ["🐺", "🧠", "🧛‍♂️", "💅", "💕", "🍺", "🤙", "🤡"];
+  const chat: any = useRef(null);
+  const nameInput: any = useRef(null);
+  const messageInput: any = useRef(null);
 
   async function sendMessage() {
     const message = {
       username: `${
-        username + emojies[Math.round(Math.random() * emojies.length)]
+        username + emojies[Math.floor(Math.random() * emojies.length)]
       }`,
       message: value,
       id: Date.now(),
@@ -22,6 +25,9 @@ const Chat = () => {
 
     socket.current.send(JSON.stringify(message));
     setValue("");
+    setTimeout(() => {
+      chat.current.scroll(0, chat.current.scrollHeight - chat.current.clientHeight);
+    }, 10);
   }
 
   function connect() {
@@ -36,6 +42,7 @@ const Chat = () => {
         id: Date.now(),
       };
       socket.current.send(JSON.stringify(message));
+      messageInput.current.focus();
     };
     socket.current.onmessage = (event: MessageEvent) => {
       const message = JSON.parse(event.data);
@@ -49,11 +56,15 @@ const Chat = () => {
     };
   }
 
+  useEffect(() => {
+    nameInput.current.focus();
+  }, []);
+
   return (
     <>
       <div className="chat">
         {messages.length ? (
-          <ul className="chat__messages">
+          <ul className="chat__messages" ref={chat}>
             {messages.map((message) => {
               return (
                 <li key={message.id} className="chat__messages-item">
@@ -76,6 +87,12 @@ const Chat = () => {
             <input
               value={value}
               onChange={(e) => setValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.target.value !== "") {
+                  sendMessage();
+                }
+              }}
+              ref={messageInput}
               type="text"
               placeholder="Напиши сообщение..."
               className="chat__form-input"
@@ -103,8 +120,14 @@ const Chat = () => {
                 value={username}
                 placeholder="Введи свое имя"
                 onChange={(e) => setUsername(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && e.target.value !== "") {
+                    connect();
+                  }
+                }}
                 type="text"
                 className="modal__form-input"
+                ref={nameInput}
               />
               <button onClick={connect} className="modal__form-btn">
                 Войти
