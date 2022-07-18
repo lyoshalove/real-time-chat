@@ -11,7 +11,7 @@
 # Start client
   write in terminal 
     ```bash
-  cd client
-  # and
-  npm start
-```
+        cd client
+        # and
+        npm start
+    ```
