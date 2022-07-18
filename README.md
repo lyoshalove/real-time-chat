@@ -10,8 +10,8 @@
     
 # Start client
   write in terminal 
-    ```bash
-        cd client
-        # and
-        npm start
-    ```
+```bash
+  cd client
+  # and
+  npm start
+```
