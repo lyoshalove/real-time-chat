@@ -1,59 +1,59 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./Chat.sass";
 import { IMessage } from "../../types/MessageType";
+import { io } from "socket.io-client";
 
 const Chat = () => {
   const [messages, setMessages] = useState<IMessage[]>([]);
-  const [value, setValue] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
   const socket: any = useRef();
   const [connected, setConnected] = useState<boolean>(false);
   const [username, setUsername] = useState<string>("");
-  const emojies: string[] = ["🐺", "🧠", "🧛‍♂️", "💅", "💕", "🍺", "🤙", "🤡"];
   const chat: any = useRef(null);
   const nameInput: any = useRef(null);
   const messageInput: any = useRef(null);
 
   async function sendMessage() {
-    const message = {
-      username: `${
-        username + emojies[Math.floor(Math.random() * emojies.length)]
-      }`,
-      message: value,
+    const messageInfo = {
+      username: username,
+      message,
       id: Date.now(),
       event: "message",
     };
 
-    socket.current.send(JSON.stringify(message));
-    setValue("");
+    if(message.trim().length > 0) {
+      socket.current.emit("sendMessage", messageInfo);
+    }
+
+    setMessage("");
     setTimeout(() => {
       chat.current.scroll(0, chat.current.scrollHeight - chat.current.clientHeight);
     }, 10);
   }
 
   function connect() {
-    socket.current = new WebSocket("ws://localhost:5000");
+    socket.current = io("https://real-time-chat-server-666.herokuapp.com/");
 
-    socket.current.onopen = () => {
+    socket.current.on("connect", () => {
       setConnected(true);
-      console.log("Подключение установлено");
-      const message = {
-        event: "connection",
-        username,
-        id: Date.now(),
-      };
-      socket.current.send(JSON.stringify(message));
+      socket.current.emit('join', username);
+      socket.current.on("joinUser", (message: IMessage) => {
+        setMessages((prev) => [...prev, message]);
+      });
+
+      socket.current.on("message", (message: IMessage) => {
+        setMessages((prev) => [...prev, message]);
+        setTimeout(() => {
+          chat.current.scroll(0, chat.current.scrollHeight - chat.current.clientHeight);
+        }, 10);
+      });
+
       messageInput.current.focus();
-    };
-    socket.current.onmessage = (event: MessageEvent) => {
-      const message = JSON.parse(event.data);
-      setMessages((prev) => [...prev, message]);
-    };
-    socket.current.onclose = () => {
-      console.log("Socket закрыт");
-    };
-    socket.current.onerror = () => {
-      console.log("Socket произошла ошибка");
-    };
+    });
+
+    socket.current.on("disconnect", () => {
+      console.log('disconnected');
+    });
   }
 
   useEffect(() => {
@@ -85,8 +85,8 @@ const Chat = () => {
         <div className="chat__form">
           <div className="chat__form-item">
             <input
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.target.value !== "") {
                   sendMessage();
